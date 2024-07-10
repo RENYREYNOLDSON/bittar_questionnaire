@@ -11,7 +11,7 @@ from functools import partial
 
 #FONTS
 label_font = ("Arial",20)
-question_font = ("Arial",50)
+question_font = ("Arial",35)
 mid_font = ("Arial",30)
 
 
@@ -23,16 +23,16 @@ class DynamicLabel:
 
         self.frame = tk.CTkFrame(master=master,fg_color="transparent")
 
-        self.max_chars = 40
+        self.max_chars = 60
         self.labels = []
         self.set_text(self.text)
         
     #Add all of the other texts with pack
     def pack(self):
-        self.frame.pack(pady=(0,100))
+        self.frame.pack(pady=(0,0),side="top")
 
     def small_pack(self):
-        self.frame.pack(pady=(0,5))
+        self.frame.pack(pady=(0,5),side="top")
 
     def pack_forget(self):
         self.frame.pack_forget()
@@ -53,7 +53,10 @@ class DynamicLabel:
             else:
                 lbl = tk.CTkLabel(master=self.frame,text=new_label,font=question_font)
                 self.labels.append(lbl)
-                new_label=""
+                new_label=word
+        if len(new_label)>1:
+            lbl = tk.CTkLabel(master=self.frame,text=new_label,font=question_font)
+            self.labels.append(lbl)
 
         for i in self.labels:
             i.pack()
@@ -80,7 +83,7 @@ class ButtonArrayFrame(tk.CTkFrame):
         self.options = []
         self.current = 0
         for i in range(8):
-            q1 = tk.CTkButton(master=self,text="Placeholder",command=partial(self.select,i),hover=False)
+            q1 = tk.CTkButton(master=self,font=("Arial",20),text="Placeholder",command=partial(self.select,i),hover=False)
             q1.pack(fill="x",expand=True,padx=100,pady=2)
             self.options.append(q1)
 
@@ -107,7 +110,7 @@ class QuestionFrame(tk.CTkFrame):
         self.prev = None
 
         self.content_frame = tk.CTkFrame(master=self,fg_color="transparent")
-        self.content_frame.place(relx=0.5,rely=0.5,anchor="center",relw=0.9)
+        self.content_frame.place(relx=0.5,rely=0.5,anchor="center",relw=0.9,relh=0.5)
 
         self.exit = tk.CTkButton(master=self,text="Exit",command=self.master.exit)
         self.exit.place(relx=0.02,rely=0.03,anchor="nw")
@@ -126,9 +129,9 @@ class QuestionFrame(tk.CTkFrame):
         self.slider_labels = tk.CTkFrame(master=self.content_frame,height=20,fg_color="transparent")
 
 
-        new = tk.CTkLabel(master=self.slider_labels,text="Discordo",anchor="center")
-        new.place(rely=0.5,relx=0.055,anchor="w")
         new = tk.CTkLabel(master=self.slider_labels,text="Discordo fortemente",anchor="center")
+        new.place(rely=0.5,relx=0.035,anchor="w")
+        new = tk.CTkLabel(master=self.slider_labels,text="Discordo",anchor="center")
         new.place(rely=0.5,relx=0.29,anchor="center")
         new = tk.CTkLabel(master=self.slider_labels,text="Neutro",anchor="center")
         new.place(rely=0.5,relx=0.5,anchor="center")
@@ -169,10 +172,13 @@ class QuestionFrame(tk.CTkFrame):
                 self.title.pack_forget()
                 self.title.set_text(question.title)
                 self.title.pack()
-                self.slider_labels.pack(fill="x",expand=True)
+
                 self.slider.set(question.score)
-                self.slider.pack(fill="both",expand=False,padx=75)
-                
+                self.slider.pack(fill="both",expand=False,padx=75,side="bottom",pady=0)
+                self.slider_labels.pack(fill="x",expand=True,side="bottom",anchor="s")
+
+
+
         else:#Q3
             #Redraw
             self.button_array_frame.pack_forget()
@@ -361,6 +367,25 @@ class App(tk.CTkToplevel):
         self.results_frame = ResultsFrame(master=self,results=self.RESULT_INFO)
         self.question_frame = QuestionFrame(master=self)
 
+        self.bind("<Return>",self.enter)
+        for i in range(5):
+            self.bind(str(i+1),self.set_score)
+
+    def set_score(self,e):
+        if self.question_frame.place_info()!={}:
+            if self.current_q!=32:
+                val = int(e.char)
+                self.QUESTIONS[self.current_q].score = val
+                self.question_frame.slider.set(val)
+
+    def enter(self,e):
+        #Go to next if possible
+        if self.question_frame.place_info()!={}:
+            if self.current_q==32:
+                self.submit()
+            else:
+                self.next()
+
     def start(self):
         #Start the quiz
         name = self.landing_frame.name.get()
@@ -433,13 +458,13 @@ class App(tk.CTkToplevel):
         Q2_S1_score = self.add_scores(16,24)
         Q2_S2_score = self.add_scores(24,32)
         Q2_ratio = Q2_S1_score/Q2_S2_score
-        if Q2_ratio>=2:
+        if Q2_ratio<=0.5:
             Q2_score = self.RESULT_INFO["Q2_scores"][4]
-        elif Q2_ratio>1.25:
+        elif Q2_ratio<0.75:
             Q2_score = self.RESULT_INFO["Q2_scores"][3]
-        elif Q2_ratio>=0.75:
+        elif Q2_ratio<=1.25:
             Q2_score = self.RESULT_INFO["Q2_scores"][2]
-        elif Q2_ratio>0:
+        elif Q2_ratio<=2:
             Q2_score = self.RESULT_INFO["Q2_scores"][1]
         else:
             Q2_score = self.RESULT_INFO["Q2_scores"][0]
@@ -602,7 +627,7 @@ def open_questions():
     for q in Q2:
         questions.append(Question(q,"slider"))
 
-    questions.append(Question(Q3.tolist()[0],"option",options=Q3.tolist()))
+    questions.append(Question(str(df.iloc[37,1]),"option",options=Q3.tolist()))
 
 
     #Result data:
